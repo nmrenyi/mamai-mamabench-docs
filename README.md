@@ -1,4 +1,4 @@
-# mamabench
+# MAMAI evaluation + mamabench + mamaretrieval
 
 Evaluation framework for a Gemma 4 E4B + RAG medical-advice chatbot deployed for nurses and midwives in Zanzibar. Domain: OBGYN, neonatal / infant, reproductive health.
 
