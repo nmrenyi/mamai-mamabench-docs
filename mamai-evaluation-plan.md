@@ -106,16 +106,18 @@ Full matrix, reported per cell:
 | Model | No RAG | + RAG (guideline corpus) |
 |---|---|---|
 | **Gemma 4 E4B** (deployment target) | baseline capability | **your deployed system** |
+| Medical fine-tuned (MedGemma 4B, Meditron 70B) | fine-tuning vs. RAG — same compute, different adaptation strategy | fine-tuning + RAG ceiling |
 | Mid-size open model (Llama 3 70B / Qwen 2.5 72B) | open-weights comparator | bigger-model-with-same-knowledge |
 | Frontier model (GPT-5, Claude, Gemini 2.5) | raw capability ceiling | overall ceiling |
 
-Five comparisons extracted from the matrix:
+Six comparisons extracted from the matrix:
 
 1. **Gemma-no-RAG → Gemma-RAG:** value added by your retrieval. Core RAG ablation.
-2. **Gemma-RAG → Frontier-no-RAG:** the deployability headline — can a 4B edge model with guideline retrieval match a frontier model working from pretraining alone?
-3. **Frontier-no-RAG → Frontier-RAG:** does the corpus add information beyond what frontier models already know from pretraining?
-4. **Gemma-RAG → Mid-size open model / Frontier-RAG:** model-size headroom when both have the same knowledge.
-5. **Gemma-no-RAG → Mid-size open model / Frontier-no-RAG:** raw capability gap at the task.
+2. **Gemma-RAG → MedGemma-no-RAG:** the fine-tuning vs. RAG headline — at the same 4B edge-device scale, does medical fine-tuning without retrieval match a general model with guideline RAG?
+3. **Gemma-RAG → Frontier-no-RAG:** the deployability headline — can a 4B edge model with guideline retrieval match a frontier model working from pretraining alone?
+4. **Frontier-no-RAG → Frontier-RAG:** does the corpus add information beyond what frontier models already know from pretraining?
+5. **Gemma-RAG → Mid-size open model / Frontier-RAG:** model-size headroom when both have the same knowledge.
+6. **Gemma-no-RAG → Mid-size open model / Frontier-no-RAG:** raw capability gap at the task.
 
 **Methodological constraint.** Keep the RAG pipeline identical across all "+ RAG" rows: same retriever, same embedding model, same chunking, same top-k, same prompt template. Only the generator changes.
 
@@ -156,4 +158,4 @@ Although we haven't run the results yet and the conclusion should be strictly fo
 
 > Under oracle retrieval, Gemma achieves a claim-level support rate of F, indicating the generator faithfully uses the retrieved context. The model is stable under paraphrasing and re-sampling (variance < V).
 
-> On mamabench, Gemma 4 E4B without retrieval scores X%. With RAG over the WHO / Tanzania MOH guideline corpus, it reaches Y%, closing most of the gap to GPT-5 without retrieval (Z%) and LlaMa / Medgemma / Meditron (Z'%). GPT-5 + our RAG reaches W%, indicating further headroom if compute were available. On the local-guideline-aligned safety subset, the RAG system outperforms / underperforms all no-RAG baselines, including frontier models."
+> On mamabench, Gemma 4 E4B without retrieval scores X%. With RAG over the WHO / Tanzania MOH guideline corpus, it reaches Y%. MedGemma 4B without retrieval scores Z_med%, directly testing whether medical fine-tuning at the same edge-device scale can substitute for RAG — Gemma + RAG outperforms / underperforms MedGemma alone. Meditron 70B without retrieval scores Z_mit%, the medical fine-tuned mid-size comparator. GPT-5 without retrieval scores Z%, GPT-5 + RAG reaches W%, the overall ceiling. On the local-guideline-aligned safety subset, the RAG system outperforms / underperforms all no-RAG baselines, including frontier and medical fine-tuned models."
