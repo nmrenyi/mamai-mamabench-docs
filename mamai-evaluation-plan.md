@@ -91,6 +91,8 @@ Same query set, same corpus, same k. Report the same metrics.
 
 This section probes how Gemma 4 behaves once retrieval is held fixed. Context ablations, stability, faithfulness, and deployment integrity checks all answer "how does the generator use the context it's given?"
 
+We could also use other models or better models, to compare with Gemma 4 on the model behaviour.
+
 ### 4.1 Faithfulness / groundedness
 
 Given the oracle retrieved context, does Gemma stick to it or hallucinate around it? This is generator behaviour, not retrieval behaviour — retrieval quality and generation faithfulness correlate weakly, so this must be measured independently.
