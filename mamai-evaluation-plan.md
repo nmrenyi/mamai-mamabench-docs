@@ -93,8 +93,19 @@ This section probes how Gemma 4 behaves once retrieval is held fixed. Context ab
 
 ### 4.1 Faithfulness / groundedness
 
-Given the oracle retrieved context, does Gemma stick to it or hallucinate around it?
-It is generator behaviour, not retrieval behaviour.
+Given the oracle retrieved context, does Gemma stick to it or hallucinate around it? This is generator behaviour, not retrieval behaviour — retrieval quality and generation faithfulness correlate weakly, so this must be measured independently.
+
+**Primary metric: claim-level support rate.** Decompose each answer into atomic claims, then check what fraction of claims are entailed by the retrieved context. Two complementary automatic methods are used.
+
+**Method A — MiniCheck (NLI-based, offline). Primary method.**
+MiniCheck is a 7B NLI model trained on synthetic data that reflects LLM hallucination patterns. For each answer–context pair: (1) decompose the answer into atomic claims, (2) run MiniCheck to classify each claim as entailed or not entailed by the context, (3) compute the fraction of claims entailed. MiniCheck runs fully offline, requires no API, and can be applied to every answer in the evaluation set.
+
+MiniCheck is preferred as the primary signal over LLM-as-judge for three reasons: (1) **scale** — the full eval set spans thousands of answers across all model × RAG conditions, making per-answer API costs prohibitive; (2) **reproducibility** — MiniCheck is deterministic, producing the same score for the same input, whereas LLM-as-judge is stochastic and would require multiple runs per answer to stabilise; (3) **speed** — local inference enables fast iteration when re-evaluating after retriever or prompt changes. LLM-as-judge is strictly more capable at nuanced clinical reasoning, but MiniCheck is the right choice for a scalable, reproducible, paper-ready pipeline.
+
+**Method B — LLM-as-judge (frontier model, batch). Calibration method.**
+Run a frontier model (Claude / GPT-4) on a random subset with the following prompt structure: given the retrieved passage(s) and the generated answer, list every claim in the answer and label each as *fully supported*, *partially supported*, or *unsupported* by the passages. Use 5–10 few-shot examples drawn from the OBGYN / neonatal domain to anchor the judge to clinical terminology. Aggregate to a per-answer support rate. This method is used to calibrate MiniCheck: if the two methods agree on a validation subset (Spearman ρ > 0.7), MiniCheck scores are trusted at scale.
+
+**Reporting.** Report claim-level support rate (mean ± std) across the mamaretrieval query set, broken down by context condition (oracle / deployed / random / degraded — see §4.4). A drop from oracle to deployed context isolates retriever-induced faithfulness loss.
 
 ### 4.2 Stability
 
