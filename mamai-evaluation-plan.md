@@ -16,17 +16,8 @@ The deployed system is Gemma 4 E4B with RAG over a guideline corpus (WHO, Tanzan
 
 Two benchmark artifacts support this:
 
-- **mamabench** — a filtered QA benchmark (MCQ + open-ended + safety) built from existing expert-validated sources. Used for end-to-end scoring.
-- **mamaretrieval** — a retrieval benchmark of `(query, relevant_chunk_ids)` pairs built from the guideline corpus itself. Used for retriever scoring and generator-behaviour diagnostics.
-
-### mamabench composition
-
-- **MCQ set:** OBGYN + Pediatrics subsets of MedMCQA (native `subject_name`), filtered MedQA (keyword + tag), filtered MMLU-medical, PediatricsMQA (neonates, infants), PedMedQA (neonates 0–3 months, infants).
-- **Open-ended set:** HealthBench items tagged with pregnancy (Z33.1), obstetric (O-chapter), or perinatal (P-chapter) ICD-10 codes, with HealthBench's physician-written rubrics.
-- **Safety set:** EquityMedQA obstetric items, FairMedQA maternal items, plus MedEqualQA and MedFuzz perturbations applied to the MCQ anchor set.
-
-### mamaretrieval composition
-`(query, relevant_chunk_ids)` pairs, these `relevant_chunk_ids` are garantied to answer this question by design.
+- **mamabench** — a filtered QA benchmark (MCQ + open-ended + safety) built from existing expert-validated sources. Used for end-to-end scoring. See `mamabench.md`.
+- **mamaretrieval** — a retrieval benchmark of `(query, relevant_chunk_ids)` pairs built from the guideline corpus itself. Used for retriever scoring and generator-behaviour diagnostics. See `mamaretrieval.md`.
 
 
 ## 2. Evaluation on end-to-end QA -- mamabench

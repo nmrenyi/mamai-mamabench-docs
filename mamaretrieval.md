@@ -1,16 +1,26 @@
-
 # mamaretrieval
 
-A shared corpus plus a query set with relevance labels. The corpus is the production RAG corpus chunked under a fixed scheme; each chunk has a stable ID.
+*A retrieval benchmark of `(query, relevant_chunk_ids)` pairs built from the production RAG corpus.*
 
-**Query sources (two methods, complementary).**
+*Used for retriever scoring and generator-behaviour diagnostics in the mamai evaluation.*
 
-- **LLM-generated (bulk):** for each chunk, prompt a strong LLM to generate 2–3 realistic nurse/midwife questions answered by that chunk. The chunk becomes a seed positive. Target: 1,000–3,000 queries.
-- **Hand-written topic queries (small, trusted):** ~100 queries written by hand against the scope (PPH management, pre-eclampsia thresholds, neonatal resuscitation, danger signs, PMTCT, anaemia, malaria in pregnancy, etc.). Seed positives identified by reading the corpus.
+---
 
-**Relevance labeling — ensuring completeness.**
+## Corpus
 
-The core challenge in building a retrieval benchmark is that each query may be answered by multiple chunks, not just one, and missing positives bias retriever scores pessimistically and non-uniformly across retrievers. Complete labels cannot be guaranteed but can be approximated via TREC-style pooling plus systematic expansion.
+The production RAG corpus chunked under a fixed scheme; each chunk has a stable ID.
+
+## Query sources
+
+Two complementary methods.
+
+**LLM-generated (bulk):** for each chunk, prompt a strong LLM to generate 2–3 realistic nurse/midwife questions answered by that chunk. The chunk becomes a seed positive. Target: 1,000–3,000 queries.
+
+**Hand-written topic queries (small, trusted):** ~100 queries written by hand against the scope (PPH management, pre-eclampsia thresholds, neonatal resuscitation, danger signs, PMTCT, anaemia, malaria in pregnancy, etc.). Seed positives identified by reading the corpus.
+
+## Relevance labeling
+
+The core challenge is that each query may be answered by multiple chunks, not just one. Missing positives bias retriever scores pessimistically and non-uniformly across retrievers. Complete labels cannot be guaranteed but can be approximated via TREC-style pooling plus systematic expansion.
 
 Pipeline per query:
 
@@ -21,18 +31,18 @@ Pipeline per query:
 
 Final labels per query: seed positive(s) plus all chunks labeled fully or partially relevant by the adjudication pipeline.
 
-**Completeness audit.**
+## Completeness audit
 
 Build a 30-query gold-standard subset (20 from Method A, 10 from Method B) labeled exhaustively: pool top-20 from 6+ retrievers, LLM-judge everything, hand-review all LLM-relevant labels plus a random sample of LLM-not-relevant labels. Compare retriever scores on this subset using (a) exhaustive labels vs (b) pipeline labels. If the gap is <2–3 pp on the primary metrics, pipeline labels are fit for purpose; if larger, expand the pool or improve the judge. Report the audit result alongside the main retrieval scores — it is the error bar on all retrieval numbers.
 
-**Metric choice under incomplete labels.**
+## Metric choice under incomplete labels
 
-Metrics vary in how much they suffer when positives are missing. Lead with completeness-robust metrics; report the rest as secondary (see §3.1):
+Metrics vary in how much they suffer when positives are missing. Lead with completeness-robust metrics; report the rest as secondary:
 
-- Robust: hit rate @ k, MRR.
-- Moderately sensitive: nDCG@k.
-- Most sensitive: Recall@k, Precision@k.
+- **Robust:** hit rate @ k, MRR.
+- **Moderately sensitive:** nDCG@k.
+- **Most sensitive:** Recall@k, Precision@k.
 
-**Versioning.**
+## Versioning
 
 The benchmark is tied to a specific corpus snapshot and chunking scheme. Treat `(corpus_version, chunking_scheme, queries, labels)` as a single versioned artifact. If the corpus is refreshed or chunking changes, chunk IDs change and the labeling pipeline must be re-run.
