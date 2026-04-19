@@ -6,7 +6,7 @@ Evaluation framework for a Gemma 4 E4B + RAG medical-advice chatbot deployed for
 
 | File | Description |
 |---|---|
-| [`mamai-evaluation-plan.md`](mamai-evaluation-plan.md) | Full evaluation plan — methodology, metrics, and narrative target |
+| [`mamai-quality-evaluation.md`](mamai-quality-evaluation.md) | Quality evaluation — retrieval, generation faithfulness, and end-to-end QA |
 | [`mamabench.md`](mamabench.md) | QA benchmark spec (MCQ + open-ended + safety sets) |
 | [`mamaretrieval.md`](mamaretrieval.md) | Retrieval benchmark spec (query construction, labeling pipeline, metrics) |
 

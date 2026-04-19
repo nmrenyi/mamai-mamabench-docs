@@ -1,4 +1,4 @@
-# MAMAI — Evaluation Plan
+# MAMAI — Quality Evaluation
 
 *System under evaluation: Gemma 4 E4B + RAG over WHO / Tanzania MOH / Zanzibar MOH guidelines, deployed as a medical-advice chatbot for nurses and midwives in Zanzibar*
 
