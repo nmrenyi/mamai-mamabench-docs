@@ -109,12 +109,13 @@ Run a frontier model (Claude / GPT-4) on a random subset with the following prom
 
 ### 4.2 Stability
 
-Same input, run multiple times or lightly perturbed. Probes whether the system is reliable under normal deployment variance.
+MCQ is retained in §2.1 as a reference metric for benchmarking, but faithfulness and stability are only measured on open-ended answers — the format that reflects real deployment, where nurses ask free-form clinical questions.
 
-- **Run-to-run variance:** sample the model N times (temperature > 0 or different seeds) on a 100–200 item subset. For MCQ, report the fraction of items where Gemma picks a different option across runs. For open-ended, report rubric-score variance across runs.
-- **Prompt sensitivity:** rephrase each question (hand-written or MedFuzz-style paraphrases). Report consistency of the answer across paraphrases. A nurse rephrasing a question slightly is a real deployment event.
-- **Answer-order sensitivity (MCQ only):** shuffle A/B/C/D options. Report the fraction of items where the selected answer flips under reorder. A stable model should not flip.
-- **Greedy vs sampled:** compare temperature-0 vs temperature-0.7 behaviour on a subset. Informs deployment temperature choice.
+Stability is measured entirely through the MiniCheck claim-support rate from §4.1: a stable model should return consistent faithfulness scores under perturbation, regardless of sampling noise or surface rephrasing. Three probes:
+
+- **Run-to-run variance:** run Gemma N times on the same open-ended question with the same retrieved context (temperature > 0). Report the std of MiniCheck claim-support rate across runs. A stable model should produce consistently faithful answers regardless of sampling.
+- **Prompt sensitivity:** rephrase each question (MedFuzz-style paraphrases or hand-written) and retrieve the same context. Report the delta in MiniCheck score between original and paraphrased query. A nurse rephrasing a question slightly is a real deployment event — if faithfulness drops under paraphrasing, the model is relying on surface wording rather than the context.
+- **Greedy vs sampled:** compare MiniCheck score at temperature-0 vs temperature-0.7 on a subset. Informs deployment temperature choice — if sampling introduces meaningful faithfulness loss, greedy decoding is preferable.
 
 ### 4.3 Deployment integrity checks
 
