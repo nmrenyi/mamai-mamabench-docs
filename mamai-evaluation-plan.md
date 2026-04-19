@@ -107,7 +107,7 @@ MiniCheck is preferred as the primary signal over LLM-as-judge for three reasons
 **Method B — LLM-as-judge (frontier model, batch). Calibration method.**
 Run a frontier model (Claude / GPT-4) on a random subset with the following prompt structure: given the retrieved passage(s) and the generated answer, list every claim in the answer and label each as *fully supported*, *partially supported*, or *unsupported* by the passages. Use 5–10 few-shot examples drawn from the OBGYN / neonatal domain to anchor the judge to clinical terminology. Aggregate to a per-answer support rate. This method is used to calibrate MiniCheck: if the two methods agree on a validation subset (Spearman ρ > 0.7), MiniCheck scores are trusted at scale.
 
-**Reporting.** Report claim-level support rate (mean ± std) across the mamaretrieval query set, broken down by context condition (oracle / deployed / random / degraded — see §4.4). A drop from oracle to deployed context isolates retriever-induced faithfulness loss.
+**Reporting.** Report claim-level support rate (mean ± std) across the mamaretrieval query set under oracle context. All generator behaviour evaluations (§4.1, §4.2, §4.3) use oracle context — retrieval quality is evaluated separately in §3.
 
 ### 4.2 Stability
 
@@ -123,26 +123,8 @@ Stability is measured entirely through the MiniCheck claim-support rate from §4
 
 Hand-reviewed subset. These catch RAG-specific failures that generic metrics miss.
 
-- **Guideline attribution accuracy.** When the model cites a guideline, is the citation real and correct?
-- **Contradiction handling.** When retrieved chunks conflict (e.g., WHO vs ACOG on a threshold), does the model acknowledge the conflict or silently pick one?
-- **Local-guideline-aligned score.** For items where a public-benchmark "correct" answer conflicts with WHO / Tanzania MOH (e.g., misoprostol PPH dosing, magnesium sulfate regimens, PMTCT protocols, anaemia thresholds, malaria in pregnancy), report a second score aligned to local guidelines rather than the benchmark key. This disagreement is a deployment-relevant feature of RAG on local guidelines, not a bug.
-
-### 4.4 Anti-noise ability
-
-Run Gemma 4 on mamaretrieval queries with the context source swapped out:
-
-| Condition | Context fed to Gemma | What it diagnoses |
-|---|---|---|
-| **Oracle context** | the gold chunk(s) directly | ceiling performance if retrieval were perfect — isolates generator capability from retriever failures |
-| **No context** | empty | baseline without retrieval |
-| **Deployed retrieval** | top-k from the production retriever | realistic operating condition |
-| **Random context** | k random chunks from the corpus | robustness to irrelevant retrieval — score should stay near no-context, not collapse |
-| **Degraded context** | lower-ranked chunks, or chunks from a deliberately poor retriever | graceful-degradation check |
-
-Metrics: 4.1, 4.2, 4.3
-
-These ablations are well-defined on mamaretrieval (gold chunks exist by construction) and ill-defined on mamabench (most items have no identifiable gold chunk in the guideline corpus).
-
+- **Functionality-level accuracy.** The core function of this RAG system is to provide guideline-backed answers. This checks whether that function executes correctly: when the model cites a guideline, does the cited source exist in the corpus, and does it actually say what the model claims? A failure here means the system is not delivering its primary value proposition — it is fabricating the very evidence it is supposed to be grounded in.
+- **Contradiction among guidelines.** A curated set (~20–30 cases) of clinically important points where guidelines diverge — e.g. WHO global recommendations vs Zanzibar / Tanzania MOH protocols on misoprostol dosing, magnesium sulfate regimens, PMTCT, anaemia thresholds, malaria in pregnancy. These cases are identified by reading the guidelines directly and require clinical expertise to compile. Two things are evaluated on this set: (1) does Gemma acknowledge the conflict or silently pick one source? (2) when Gemma picks the local guideline over the global standard, does it score correctly against a local-aligned answer key rather than the benchmark key? The gap between benchmark-aligned and local-aligned scores is a deployment-relevant signal, not a failure.
 
 ---
 
