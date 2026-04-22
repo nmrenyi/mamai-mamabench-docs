@@ -120,3 +120,54 @@ For each component and condition:
 | Long (> 50 tok) | | | |
 
 Accompany each table with a latency distribution plot. For end-to-end, overlay standard vs. sustained load distributions. Report hardware spec table, CPU temperature (idle / peak), memory (baseline / peak), and any throttling or swap events.
+
+---
+
+## 7. Battery and thermal impact
+
+This section evaluates two deployment-critical concerns specific to the Zanzibar context: how much battery a session of queries consumes, and how the device thermals evolve over sustained use. A device used in a warm ward without reliable charging will face conditions significantly worse than a lab benchmark.
+
+### 7.1 Battery consumption
+
+**Method.** Run the benchmark unplugged. Record battery level via ADB before and after a fixed session (e.g. 30 end-to-end queries):
+
+```
+adb shell dumpsys battery
+```
+
+For energy consumption over the session window:
+
+```
+adb shell dumpsys batterystats
+```
+
+**Metrics.**
+- Battery drain (%) per session
+- Estimated queries per full charge cycle
+
+**Caveat.** Battery measurement is noisy on a plugged-in device — the benchmark must run unplugged for meaningful results. Long runs may require session splitting to avoid full discharge.
+
+### 7.2 Thermal profile over time
+
+**Method.** Log CPU temperature continuously throughout the benchmark run — sample every 10 seconds via ADB:
+
+```
+adb shell cat /sys/class/thermal/thermal_zone*/temp
+```
+
+Additionally, query the Android thermal throttling status at each sample point:
+
+```
+adb shell dumpsys thermalservice
+```
+
+This reports throttling severity levels directly (NONE / LIGHT / MODERATE / SEVERE / CRITICAL), not just temperature.
+
+**Metrics.**
+- Temperature over time plot (°C vs. elapsed time)
+- Throttling severity level over time, overlaid on the latency-over-time plot
+- Time to first throttling onset (seconds from session start)
+- Temperature at throttling onset
+- Recovery time after cooldown resumes
+
+**Why this matters.** The existing benchmark shows 5–15% latency degradation over 108 runs in lab conditions. In a 35°C ward without air conditioning, throttling onset will be earlier and more severe. The thermal profile over time gives a deployment-realistic picture of how the system behaves across a full shift, not just a short benchmark run.
