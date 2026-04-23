@@ -46,6 +46,7 @@ If retrieval performance is a concern, compare the deployed retriever against:
 - A different embedding model (e.g., E5, BGE-M3, medical-domain embedding)
 - Hybrid (BM25 + dense)
 - Re-ranker added on top
+- Other advanved retreiver models (like https://huggingface.co/lightonai/LateOn)
 
 Same query set, same corpus, same k. Report the same metrics.
 
