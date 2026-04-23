@@ -85,8 +85,9 @@ MCQ is retained in §4 as a reference metric for benchmarking, but faithfulness 
 
 Stability is measured entirely through the MiniCheck claim-support rate from §3.1: a stable model should return consistent faithfulness scores under perturbation, regardless of sampling noise or surface rephrasing. Three probes:
 
-- **Run-to-run variance:** run Gemma N times on the same open-ended question with the same retrieved context (temperature > 0). Report the std of MiniCheck claim-support rate across runs. A stable model should produce consistently faithful answers regardless of sampling.
 - **Prompt sensitivity:** rephrase each question (MedFuzz-style paraphrases or hand-written) and retrieve the same context. Report the delta in MiniCheck score between original and paraphrased query. A nurse rephrasing a question slightly is a real deployment event — if faithfulness drops under paraphrasing, the model is relying on surface wording rather than the context.
+  - first rewrite the query? Would it be better?
+- **Run-to-run variance:** run Gemma N times on the same open-ended question with the same retrieved context (temperature > 0). Report the std of MiniCheck claim-support rate across runs. A stable model should produce consistently faithful answers regardless of sampling.
 - **Greedy vs sampled:** compare MiniCheck score at temperature-0 vs temperature-0.7 on a subset. Informs deployment temperature choice — if sampling introduces meaningful faithfulness loss, greedy decoding is preferable.
 
 ### 3.3 Deployment integrity checks
