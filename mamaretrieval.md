@@ -32,9 +32,25 @@ Pipeline per query:
 
 1. **Seed positive.** The source chunk the query was generated from.
 2. **Pool candidates across retrievers.** Run the query through 3–4 retrievers (BM25, at least one embedding model, optionally hybrid). Union the top-10 results, dedupe. Yields ~20–30 candidate chunks per query.
-3. **Adjudicate with an LLM judge.** For each candidate, ask a strong LLM whether the passage answers the query (fully / partially / not at all). Calibrate the judge against 50–100 items before trusting it at scale; target >85% agreement.
+3. **Adjudicate with an LLM judge** using the 3-dimension rubric below.
 
-Final labels per query: seed positive plus all chunks labeled fully or partially relevant.
+### Rubric
+
+For each candidate, the judge returns three booleans, combined into a graded score:
+
+- **D1 — Topic.** Does the chunk address the same clinical problem as the query?
+- **D2 — Meaningful.** Does it contain clinical information relevant to the topic? Background/context counts; administrative text and assessment rubrics do not.
+- **D3 — Actionable.** Does it contain specific clinical guidance (dosing, protocols, procedural steps)?
+
+**score = D1 × (D2 + D3)** ∈ {0, 1, 2}:
+
+- `0` — off topic, or on-topic but no useful information
+- `1` — on topic, meaningful background only
+- `2` — on topic, contains actionable guidance
+
+Two structural constraints are enforced in post-processing: `D1=False` zeros D2/D3, and `D3=True` implies `D2=True`.
+
+> Implementation details — judge model and prompt, output schema, scale, score distribution, and verification — live in the [`mamaretrieval` repo README](https://github.com/nmrenyi/mamaretrieval/blob/main/README.md). The original calibration check (>85% agreement against 50–100 human labels) was deferred; the **Completeness audit** below is the planned mitigation.
 
 ## Completeness audit
 
