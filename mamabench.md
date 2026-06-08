@@ -4,6 +4,8 @@
 
 *Built from existing expert-validated sources. Used for end-to-end scoring of the mamai system.*
 
+> **Status (2026-06-08):** MCQ + open-ended tracks shipped at v0.2.1 on [Hugging Face](https://huggingface.co/datasets/nmrenyi/mamabench); v0.2.1 also ships an OBGYN-scoped physician-labelled judge-calibration set (6,853 triples). Code: [`nmrenyi/mamabench`](https://github.com/nmrenyi/mamabench). Safety set is the next track to build (planned v0.3).
+
 ---
 
 ## Composition

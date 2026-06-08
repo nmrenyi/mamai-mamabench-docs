@@ -4,6 +4,8 @@
 
 *Latency is evaluated on the actual deployment hardware. Results obtained on a different machine are not meaningful for deployment decisions.*
 
+> **Status (2026-06-08):** executed. Pilot latency evaluation on the OPD2413 tablet across CPU + GPU, with the FP16/FP32 maxNumToken investigation done. Live report: [`latency_report_v2.md` in the `mamai` repo](https://github.com/nmrenyi/mamai/blob/main/evaluation/reports/latency_report_v2.md). This document remains the methodology spec.
+
 ---
 
 ## 1. What is being evaluated

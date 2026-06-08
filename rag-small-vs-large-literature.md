@@ -4,6 +4,8 @@
 
 *Covers the specific comparison in §4.1 comparison 3: "Gemma-RAG → Frontier-no-RAG — the deployability headline."*
 
+> **Status (2026-06-08):** literature review, point-in-time snapshot (compiled April 2026). The Pandey "irrelevant generation" risk this review surfaces is the motivation for the gated fine-tuning plan ([`mamai-finetuning-plan.md`](mamai-finetuning-plan.md)). Empirically, oracle-context faithfulness on Gemma 4 E4B is ~0.3% true-hallucination (see [`mamai-quality-evaluation.md` §3.1](mamai-quality-evaluation.md#31-faithfulness--groundedness)), which directly refutes the dominant risk on the oracle axis — but the real-retrieval axis remains untested.
+
 ---
 
 ## Summary

@@ -4,6 +4,8 @@
 
 *Used for retriever scoring and generator-behaviour diagnostics in the mamai evaluation.*
 
+> **Status (2026-06-08):** built and shipped at v0.2.0 on [Hugging Face](https://huggingface.co/datasets/nmrenyi/mamaretrieval) — 3,185 queries, 6 retrievers (bm25, medcpt, octen, voyage-4-large, lateon, gecko), full top-20 union judged (230,964 (q, c) pairs) under the 4-dim graded rubric. Code + audit reports: [`nmrenyi/mamaretrieval`](https://github.com/nmrenyi/mamaretrieval) (`AUDIT_REPORT_v2.md`). Headline: voyage > octen > lateon ≫ gecko > bm25 > medcpt at deployment depth k=3. This file is a **design-only spec**; the executable design lives in the code repo.
+
 ---
 
 ## Corpus

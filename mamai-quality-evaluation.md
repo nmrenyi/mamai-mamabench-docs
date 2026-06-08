@@ -4,6 +4,8 @@
 
 *Domain scope: OBGYN, neonatal / infant, reproductive health*
 
+> **Status (2026-06-08):** retriever evaluation (§2) and generator faithfulness (§3.1) are built and run. End-to-end MCQ (§4) is run. End-to-end open-ended (§4) is blocked on a closed-source judge decision. Live results live in `mamai-eval` (`configs/config-v0.2.0/reports/`) and on the `feat/faithfulness-eval` branch of the same repo (`docs/faithfulness-eval-v0.2.0.md`). Forward-looking plan: [`next-steps-2026-06.md`](next-steps-2026-06.md).
+
 ---
 
 ## 1. What is being evaluated
@@ -62,24 +64,69 @@ We could also use other models or better models to compare with Gemma 4 on model
 
 Given the oracle retrieved context, does Gemma stick to it or hallucinate around it? This is generator behaviour, not retrieval behaviour — retrieval quality and generation faithfulness correlate weakly, so this must be measured independently.
 
-**Primary metric: sentence-level support rate.** For each answer, check what fraction of sentences are entailed by the retrieved context using MiniCheck. Two pipeline variants are used, differing in whether a decomposition step precedes verification.
+#### Judge-model selection
 
-MiniCheck is a 7B NLI model trained on synthetic data that reflects LLM hallucination patterns. It takes a (claim, context) pair and outputs a continuous probability score (0–1); the default threshold is 0.5. It runs fully offline, requires no API, and is deterministic. MiniCheck is preferred over LLM-as-judge as the primary signal for three reasons: (1) **scale** — the full eval set spans thousands of answers across all model × RAG conditions, making per-answer API costs prohibitive; (2) **reproducibility** — MiniCheck produces the same score for the same input every time; (3) **speed** — local inference enables fast iteration when re-evaluating after retriever or prompt changes.
+Three candidates were considered; two were rejected with reasons worth keeping:
 
-**Known limitation — partially correct sentences.** For a sentence that encodes multiple claims where some are supported and some are not, MiniCheck returns one blended probability for the whole sentence. A partially wrong sentence can score above 0.5 and be counted as supported. This is particularly relevant for dense clinical sentences that pack multiple dosing or procedural claims into one (e.g. loading dose + maintenance dose). The sentence-level support rate metric will therefore be optimistic in the presence of such sentences. Report this as a known limitation alongside the scores; the calibration step (below) against a frontier LLM judge — which can label claims as *partially supported* — will surface how often this occurs.
+1. **MiniCheck (Bespoke-MiniCheck-7B)** — built and smoke-tested. Rejected: at 7B it is small for the task, and being a pure NLI classifier it produces no reasoning trace, so verdicts can't be audited row-by-row.
+2. **Qwen3.5-397B-A17B** — rejected for **circularity**. This is the same model that produced the mamaretrieval relevance labels that *built* the oracle. Using it again to judge faithfulness against that oracle means a shared blind spot would inflate the score undetectably.
+3. **Patronus Lynx 70B** (`PatronusAI/Llama-3-Patronus-Lynx-70B-Instruct`) — **chosen.** Open weights, purpose-built for RAG hallucination detection, medical-domain trained (PubMedQA), emits bullet-point reasoning, Llama-3 family (independent of the Qwen oracle judge). Limitation: holistic per-response PASS/FAIL, not per-claim.
 
-**Pipeline 1 — MiniCheck directly (no decomposition).**
-MiniCheck was designed to check sentence-level or paragraph-level text directly without requiring atomic decomposition. Split the answer into sentences using scispaCy (a biomedical-tuned tokenizer that correctly handles clinical abbreviations and terminology), then feed each sentence to MiniCheck against the retrieved context. Aggregate to a per-answer support rate. This pipeline is fully deterministic, requires no LLM calls, and is the fastest option.
+#### Pipeline
 
-**Pipeline 2 — Decompose first, then MiniCheck.**
-For answers where a single sentence encodes multiple independent claims (common in clinical guidelines), sentence-level splitting may under-penalise hallucination embedded in otherwise faithful sentences. In this pipeline: (1) split into sentences with scispaCy, (2) decompose each sentence into atomic claims using MedScore — a Flan-T5 model fine-tuned specifically for medical claim decomposition, handling condition-dependent statements ("for diabetic patients…") and hedged recommendations that general decomposers miss, (3) run MiniCheck on each atomic claim. This yields finer-grained support rates at the cost of an additional small-model inference step. MedScore is local and deterministic; no LLM is required.
+Three stages, all on the EPFL cluster:
 
-*Note: research ("Decomposition Dilemmas", 2024) shows that decomposition can hurt rather than help on conditional and hedged medical text, because fragments become unverifiable in isolation. Pipeline 1 should be the default; Pipeline 2 used selectively on longer, denser answers.*
+| Stage | Tool | Output | Compute |
+|---|---|---|---|
+| 1. Oracle build | `build_oracle.py` (HF loader over mamaretrieval) | top-3 oracle chunks per query, capped at deployment `top_k = 3` | local |
+| 2. Generation | `eval_faithfulness.py` (llama-cpp, Gemma 4 E4B Q4_0, deployment params T=1.0, top_p=0.95, top_k=64) | per-query Gemma response under oracle context | 1×A100, ~1.3 s/query |
+| 3. Faithfulness scoring | `score_lynx.py` (Lynx 70B via vLLM) | per-response PASS/FAIL + reasoning | 2×A100, ~27 min for ~2,500 responses |
 
-**Calibration — LLM-as-judge (frontier model, batch).**
-Run a frontier model (Claude / GPT-4) on a random subset: given the retrieved passage(s) and the generated answer, label each claim as *fully supported*, *partially supported*, or *unsupported*. Use 5–10 few-shot examples from the OBGYN / neonatal domain. If both pipeline outputs agree with the LLM judge on the validation subset (Spearman ρ > 0.7), MiniCheck scores are trusted at scale.
+Oracle = mamaretrieval chunks with relevance `score ≥ 5` (the threshold the relevance judge was validated at against Claude Opus). Queries with no `score ≥ 5` chunk are excluded; queries with >3 are capped to the top 3 to match deployed retrieval depth.
 
-**Reporting.** Report sentence-level support rate (mean ± std) for both pipelines across the mamaretrieval query set under oracle context. Large gaps between Pipeline 1 and Pipeline 2 on the same answers indicate multi-claim sentences and inform which pipeline to use at scale.
+#### Calibration with a frontier judge (required, not optional)
+
+Lynx is a holistic detector and tends to over-flag — raw FAIL counts are **not** the true-hallucination rate. The calibration step takes the FAIL pool and asks a frontier LLM to:
+
+1. **Categorise** each FAIL into `{contradiction, unsupported_addition, omission, unclear, parse-fail}`. Only the first two are genuine faithfulness failures — `omission` (incomplete-but-correct answer) and `parse-fail` (scoring artefact) are subtracted from the raw FAIL count.
+2. **Independently verdict** a sample of FAILs as PASS/FAIL/unclear, to estimate Lynx's precision on its FAILs.
+
+The calibrated true-hallucination rate is then `(genuine FAILs from categorisation) × (Lynx precision from independent verdict) / total responses`.
+
+**Why a frontier judge is non-negotiable here.** Open-weight judges were tried as a cheaper substitute (gpt-oss-120b at `reasoning_effort=high`) and **failed both pre-committed gates** against the Claude Opus baseline:
+- Categorisation: only the `unclear` bucket was within ±20% tolerance; gpt-oss reassigned 24/48 Claude `contradiction` labels to other buckets.
+- Calibration agreement: 75/100 vs ≥90 required. 18 of the 25 disagreements are PASS / FAIL drift on cases the rubric explicitly says are PASS — refusals with escalation, partial-omission answers, clarification questions.
+- The calibrated true-hallucination rate would read **11.20% vs Claude's 0.33%** — ~34× off, pure rubric-drift, not data signal.
+
+Open weights rubber-stamp incompleteness and refusals as faithfulness failures despite the rubric saying PASS. The final calibration requires a closed-source frontier judge (currently planned: GPT-5.5).
+
+#### Results
+
+Two pipeline passes complete:
+
+| Oracle | Queries | Raw Lynx PASS rate | 95% CI |
+|---|---:|---:|---|
+| v0.1.0 (top-3 union, score ≥ 5) | 2,659 | **94.55%** (2,514 / 145) | [93.6, 95.4] |
+| v0.2.0 (top-20 union, score ≥ 5) | 2,989 | **94.18%** (2,815 / 174) | [93.3, 95.0] |
+
+CIs overlap heavily — the richer v0.2.0 oracle did not shift the raw headline.
+
+**v0.1.0 calibration (Claude Opus baseline, n=100 sample + full FAIL categorisation):**
+
+- Lynx precision on its FAILs: ~6% (heavy over-flagger).
+- Lynx recall on PASS rows: 0/50 misses (no false negatives in the sample).
+- FAIL categorisation of all 145 raw FAILs: 48 contradictions + 22 unsupported additions + 35 omissions + 40 unclear/parse-fail. Only the first two count as faithfulness failures under the rubric.
+- **Calibrated true-hallucination rate ≈ 0.3%.**
+
+**v0.2.0 calibration: pending.** Blocked on the same closed-source judge decision that blocks the open-ended rubric track in §4. See [`next-steps-2026-06.md`](next-steps-2026-06.md) §"Cross-cutting decisions" for the consolidated budget ask.
+
+#### Side-finding: 6 self-contradictory oracle contexts
+
+The categorisation pass surfaced 6 queries whose oracle chunks contradict each other — i.e. the benchmark itself contains internally inconsistent ground truth (e.g. different misoprostol doses across two sources, both labelled relevant). Filed upstream as [`mamaretrieval` issue #18](https://github.com/nmrenyi/mamaretrieval/issues/18) for cleanup.
+
+#### What this leaves open
+
+Oracle-context faithfulness is essentially solved. The unanswered question is **faithfulness under real (non-oracle) retrieval**: when the input is the deployed gecko top-3 rather than curated `score ≥ 5` chunks, does the faithfulness rate collapse? This is the experiment that can fire the decision gate in [`mamai-finetuning-plan.md`](mamai-finetuning-plan.md). Until it runs, the fine-tuning plan stays shelved.
 
 ### 3.2 Stability
 
