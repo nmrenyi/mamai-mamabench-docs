@@ -10,6 +10,37 @@ This month is about **using them to improve the system**, not adding more measur
 
 ---
 
+## At a glance
+
+Three buckets, grouped by work type rather than per-repo.
+
+**1. Real improvements**
+- Query-side improvements ablation ([`mamai#62`](https://github.com/nmrenyi/mamai/issues/62)) — Track A, priority.
+- Embedding-model swap (voyage / octen / lateon vs gecko) — Track B, parallel.
+- Corpus expansion ([`mamai-medical-guidelines#3`](https://github.com/nmrenyi/mamai-medical-guidelines/issues/3)) — scope with Leah.
+- Rebuild RAG bundle on new corpus + retriever.
+- Fix 6 self-contradictory oracle contexts ([`mamaretrieval#18`](https://github.com/nmrenyi/mamaretrieval/issues/18)).
+
+**2. Evaluation**
+- Consolidate closed-source judge (one budget ask, likely GPT-5.5).
+- Resolve [`mamai-eval#1`](https://github.com/nmrenyi/mamai-eval/issues/1) (`max_tokens=2048`) before Phase B.
+- Phase A judge calibration on the v0.2.1 OBGYN physician set (n=6,853).
+- Phase B production rescore — HealthBench rubric, ±RAG, n=38,308.
+- Faithfulness v0.2.0 calibration — final true-hallucination headline.
+- Real-retrieval faithfulness probe — only experiment that can fire the fine-tuning gate.
+- Noisy-query probe over the 6 retrievers.
+- *Likely slips past 2026-06-30:* mamabench safety set (v0.3), open-ended on-device vs cluster calibration.
+
+**3. Docs and report**
+- Open-ended ±RAG report (`mamai-eval`) — characterises the RAG effect.
+- `mamai-report` — start drafting now; finalise by 2026-06-30.
+- `mamabench` v0.2.2 dataset-card update once Phase A clears.
+- Merge `feat/judge-responses-api-20260605` and PR #2 `feat/faithfulness-eval`.
+
+**Dependencies in one line:** judge consolidation (Eval) unblocks Phase B + faithfulness calibration → which unblocks the open-ended ±RAG report (Docs) → which feeds the tech report (Docs). Query-side ablation and corpus expansion (Improvements) are independent of the judge and can run in parallel from W1.
+
+---
+
 ## Cross-cutting decisions to make first
 
 These three decisions unblock work in multiple repos and shouldn't be made in isolation per-track.
