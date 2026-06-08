@@ -15,11 +15,11 @@ This month is about **using them to improve the system**, not adding more measur
 These three decisions unblock work in multiple repos and shouldn't be made in isolation per-track.
 
 1. **Consolidate the closed-source judge.** Two tracks each want a closed-source judge: the open-ended rubric (rubric track, currently testing gpt-5-mini — not materially better than gpt-oss-120b, +1.6 pp on not-met agreement) and the faithfulness calibration (currently blocked after gpt-oss-120b failed both gates with 75/100 calibration agreement vs ≥90 required, and 11.20% vs Claude 0.33% drift). Both should converge on the same tier. Likely escalation to GPT-5.5 — file one budget ask covering both tracks rather than two parallel ones.
-2. **Retriever improvement — pursue *two* tracks in parallel, not one.**
-   - **Track A — query rewriting before retrieval (priority, [`mamai#62`](https://github.com/nmrenyi/mamai/issues/62)).** Nurse queries are short and colloquial ("baby not breathing", "bleeding after birth"); the corpus is in clinical-guideline vocabulary. Rewriting closes the gap *without* changing the embedding model. Run the 3-step offline ablation in the issue first (rewrite + HyDE + multi-query, all measured against `kenya_vignettes` retrieval + downstream judge scores) before any on-device implementation. Strictly cheaper than swapping the retriever and likely complementary.
-   - **Track B — embedding-model swap.** Voyage / octen / lateon are 25 pp ahead of gecko on weighted precision at full scale (Tier 2, n=3,185). Voyage is closed-weight; octen and lateon are open. Decide before re-running any expensive +RAG numbers — every retriever change invalidates the RAG context bundle and forces re-precompute.
+2. **Retriever improvement — two parallel tracks.**
+   - **Track A (priority): query-side improvements** ([`mamai#62`](https://github.com/nmrenyi/mamai/issues/62)). Closes the user-vocabulary / corpus-vocabulary gap without swapping the embedding model. Techniques (rewriting / HyDE / multi-query) and eval-venue rationale: [`mamai-quality-evaluation.md` §2.3](mamai-quality-evaluation.md#23-query-side-improvements).
+   - **Track B: embedding-model swap.** Voyage / octen / lateon are ~25 pp ahead of gecko at full scale (Tier 2, n=3,185). Decide before re-running any expensive +RAG numbers — a swap invalidates the RAG context bundle.
 
-   Track A is the higher-priority experiment because it ships even if Track B doesn't (and it informs Track B by isolating "retriever quality" from "query/corpus vocabulary mismatch").
+   Track A is higher priority because it ships even if Track B doesn't, and isolates retriever quality from vocabulary mismatch.
 3. **Corpus expansion as a project-level priority.** Leah's ICM demo finding (week-13 report) makes corpus coverage the single most visible deployment gap. The pipeline lives in [`mamai-medical-guidelines#3`](https://github.com/nmrenyi/mamai-medical-guidelines/issues/3) (systematic PubMed/PMC collection). Propagates to chunk IDs, RAG bundle, and faithfulness oracle. Worth scoping with Leah and Trevor before starting.
 
 ---
@@ -73,11 +73,7 @@ This is where the **highest-leverage improvement work happens this month**, per 
 
 The big item is the query-rewriting investigation; everything else is downstream of the retriever / corpus decisions.
 
-1. **Query rewriting before retrieval — offline ablation ([`#62`](https://github.com/nmrenyi/mamai/issues/62)).** Priority item. Run the 3-step plan from the issue, all in `mamai-eval` / `evaluation/` without touching app code:
-   1. Generate rewrites with Gemma 4 E4B on `kenya_vignettes` queries; embed both original and rewrite; compare top-3 retrieval + downstream judge scores.
-   2. Compare against cheaper alternatives in the same ablation: template-based expansion, HyDE (embed a one-sentence hypothetical answer), multi-query (union of top-3 from N variants).
-   3. Only if a clear winner survives an adversarial safety review on `kenya_vignettes`, scope the on-device implementation (`rewriteQuery()` step in `RagPipeline.generateResponse()`, latency measurement, runtime toggle).
-   Deployment model assumption: **Gemma 4 E4B stays** as both the rewrite model and the answer model (newer, better forward compatibility — see [`mamai#48`](https://github.com/nmrenyi/mamai/issues/48) for the gemma3n alternative, parked).
+1. **Query-side improvements — offline ablation ([`#62`](https://github.com/nmrenyi/mamai/issues/62)).** Priority. Run the 3-step plan from the issue (offline ablation first, on-device implementation gated on a safety review). Techniques and eval venue: [`mamai-quality-evaluation.md` §2.3](mamai-quality-evaluation.md#23-query-side-improvements). Deployment model stays **Gemma 4 E4B** for both rewrite + answer (gemma3n alternative parked, see [`mamai#48`](https://github.com/nmrenyi/mamai/issues/48)).
 2. **Rebuild the RAG bundle** to the new corpus version + (possibly) new embedding model. Bump bundle version, sign, ship.
 3. **Optional: extend `BenchmarkForegroundService` from MCQ to open-ended**, so the open-ended ±RAG report can include a device row. Low priority unless device-level open-ended numbers are needed for the report.
 

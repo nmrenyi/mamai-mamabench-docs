@@ -52,6 +52,29 @@ If retrieval performance is a concern, compare the deployed retriever against:
 
 Same query set, same corpus, same k. Report the same metrics.
 
+### 2.3 Query-side improvements
+
+A distinct axis from §2.2: instead of swapping the retriever, transform the *query* so it lands closer to the relevant chunks in the existing retriever's embedding space. Useful when the gap between user vocabulary (short, colloquial, symptom-first) and corpus vocabulary (clinical-guideline phrasing) is the binding constraint — the suspected case for the deployed nurse / midwife audience in Zanzibar.
+
+**Query rewriting.** An LLM rewrites the user's short colloquial query into clinical-guideline phrasing before embedding. Cost: one extra LLM prefill before retrieval can start; on-device this adds to user-visible TTFT.
+
+**HyDE — Hypothetical Document Embeddings** ([Gao et al., 2022](https://arxiv.org/abs/2212.10496)). Instead of embedding the question, ask an LLM to generate a hypothetical *answer*, embed that, and use it for retrieval. The hypothetical content can be wrong — only the embedding's similarity to real chunks matters. Closes the question-vs-answer vocabulary gap that plain query embedding misses (a question and its answer look very different in embedding space; an answer and the chunk that supports it look very similar).
+
+**Multi-query.** Generate N rephrasings of the query, embed each, retrieve top-k for each, union the results. Catches chunks any single phrasing misses; cost scales linearly with N. No on-device latency cost if the variants are pre-generated and cached.
+
+**Template-based expansion.** Append a fixed clinical-context suffix to the query (e.g. "in obstetric / neonatal care"). Zero LLM call; cheap baseline, only useful if the vocabulary gap is small.
+
+**Eval venue: `kenya_vignettes` (mamabench, n=284).** Chosen because:
+
+1. **It is open-ended, not MCQ.** Retrieval quality only propagates to answer quality when generation actually uses the retrieved chunks. MCQ tends to be answered from parametric knowledge regardless of retrieval (which is why MCQ ±RAG regressed in `mamai-eval/configs/config-v0.2.0/reports/mcq-rag-effect-20260520.md`); open-ended is where retrieval gains show up.
+2. **The queries are deployment-shaped.** Kenya vignettes are real African clinical scenarios — close to what Zanzibar midwives actually ask, not USMLE board-exam phrasings.
+3. **Judge rubrics already exist** via the Qwen3 key-fact extraction over the Kenya reference answers (mamabench v0.2). No new scoring infrastructure required.
+4. **n=284 is large enough** to detect a ±0.1 weighted-score delta (vs `afrimedqa_saq` at n=37 or `whb_stumps` at n=20, which are too small for stable comparisons).
+
+Trade-off: kenya_vignettes is one distribution. A winning variant must additionally pass an adversarial safety review on the same set before any on-device implementation — query rewriting that drops or distorts critical terms ("fever in a 2-week-old" → "infant pyrexia" loses the neonatal-sepsis signal) is a real risk.
+
+Concrete plan: [`mamai#62`](https://github.com/nmrenyi/mamai/issues/62).
+
 ---
 
 ## 3. Generator evaluation — LLM (Gemma 4) behaviour
