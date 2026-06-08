@@ -15,6 +15,7 @@ This repo is the **design / methodology** layer. Built artifacts and live result
 | [`mamaretrieval.md`](mamaretrieval.md) | Retrieval benchmark spec (query construction, labeling pipeline, metrics) |
 | [`mamai-finetuning-plan.md`](mamai-finetuning-plan.md) | RAG-aware fine-tuning plan (**gated; not currently triggered** — oracle faithfulness ~0.3%) |
 | [`rag-small-vs-large-literature.md`](rag-small-vs-large-literature.md) | Literature review — can a small model + RAG match a frontier model without RAG? |
+| [`next-steps-2026-06.md`](next-steps-2026-06.md) | Forward-looking plan for June (the final month) — per-repo next steps and cross-cutting decisions |
 
 ## Evaluation approach
 
