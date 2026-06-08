@@ -6,6 +6,8 @@ The past two months built the instruments: mamaretrieval (v0.2.0, Tier 3, 230k l
 
 This month is about **using them to improve the system**, not adding more measurement surface. There are two genuinely high-leverage improvement levers: (1) corpus expansion — the ICM demo with Leah surfaced corpus coverage as the most visible gap; (2) retriever upgrade — gecko sits ~25 pp below voyage / octen / lateon on weighted precision at full scale. Everything else is finishing what's already in flight (open-ended judge, faithfulness calibration, safety set) or starting the report.
 
+**Hard anchor: internship ends 2026-06-30** (a Tuesday). This gives ~17 weekdays from 2026-06-08, with W4 effectively truncated to 2 days — the schedule below accounts for this.
+
 ---
 
 ## Cross-cutting decisions to make first
@@ -30,10 +32,11 @@ The open-ended ±RAG report has been blocked here since 2026-05-21. Finishing th
 
 1. **Commit the uncommitted gpt-5-mini smoke results** sitting in `calibration/judge_validation/{reports,verdicts}/gpt-5-mini/`.
 2. **Escalate the judge tier** per the cross-cutting decision. Run Phase A calibration on the chosen tier against the v0.2.1 OBGYN physician set (6,853 triples).
-3. **Run Phase B production rescore** on the full 38,308 HealthBench rubric responses (±RAG), once the judge is validated.
-4. **Write the open-ended ±RAG report**, mirroring `mcq-rag-effect-20260520.md`. This is the deployment-claim report.
-5. **Add open-ended on-device vs cluster calibration** (carry-over from week 11). MCQ calibration showed +2.7 pp delta within noise; open-ended is more deployment-realistic and may behave differently.
-6. Merge `feat/judge-responses-api-20260605` once Phase B lands.
+3. **Resolve [`mamai-eval#1`](https://github.com/nmrenyi/mamai-eval/issues/1) — the `generation.max_tokens=2048` question — before Phase B.** Open since 2026-05-19. The answer affects whether the open-ended numbers Phase B produces are final or need re-running; cheaper to decide before spending the production rescore than after.
+4. **Run Phase B production rescore** on the full 38,308 HealthBench rubric responses (±RAG), once the judge is validated and `max_tokens` is settled.
+5. **Write the open-ended ±RAG report**, mirroring `mcq-rag-effect-20260520.md`. The goal is to characterise the RAG effect on open-ended (real-world-shaped) queries — whether it helps or hurts on this distribution, by how much, on which categories. No pre-committed deployment criterion this month; the report informs the deploy / redesign / drop-RAG decision rather than gating it.
+6. **Add open-ended on-device vs cluster calibration** (carry-over from week 11). MCQ calibration showed +2.7 pp delta within noise; open-ended is more deployment-realistic and may behave differently. Slips past 2026-06-30 if W3/W4 get tight.
+7. Merge `feat/judge-responses-api-20260605` once Phase B lands.
 
 ### `mamai-eval` worktree `feat/faithfulness-eval` (`mamai-eval-faithfulness/`)
 
@@ -78,14 +81,6 @@ The big item is the query-rewriting investigation; everything else is downstream
 2. **Rebuild the RAG bundle** to the new corpus version + (possibly) new embedding model. Bump bundle version, sign, ship.
 3. **Optional: extend `BenchmarkForegroundService` from MCQ to open-ended**, so the open-ended ±RAG report can include a device row. Low priority unless device-level open-ended numbers are needed for the report.
 
-### `mamai-mamabench-docs`
-
-Stale. Pure cleanup.
-
-1. **Commit the local changes** — `README.md` is modified; `mamai-finetuning-plan.md` is untracked. Both have sat there since before 2026-05-25.
-2. **Update `mamai-quality-evaluation.md` §3.1** to reflect the actual built pipeline: Lynx-70B (not MiniCheck) as primary, with the judge-selection journey (MiniCheck → Qwen3 rejected for circularity → Lynx) and the calibrated ≈ 0.3% true-hallucination headline.
-3. **Mark `mamai-finetuning-plan.md` as "gated — not triggered"** in the README, citing the oracle-faithfulness result. The plan stays shelved until the real-retrieval faithfulness probe (see faithfulness §2) shows a collapse.
-
 ### `mamai-report`
 
 The final deliverable. Currently just a LaTeX scaffold (2 commits, last touch 2026-05-17). With one month of internship remaining, this needs to start.
@@ -103,16 +98,16 @@ The final deliverable. Currently just a LaTeX scaffold (2 commits, last touch 20
 
 ## Suggested ordering this month
 
-A rough sequence that minimises waiting on cross-cutting decisions.
+A rough sequence that minimises waiting on cross-cutting decisions. W4 is only 2 weekdays (Mon–Tue, 29–30 June), so report writing has to start in W3, not W4.
 
-| Week | Focus |
-|---|---|
-| W1 | Cross-cutting decisions (judge tier + retriever tracks). File the consolidated budget. Commit stale docs in `mamai-mamabench-docs`. Start corpus expansion scoping with Leah. **Kick off query-rewriting offline ablation ([`mamai#62`](https://github.com/nmrenyi/mamai/issues/62))** — Track A of the retriever improvement work. Begin drafting methodology + retrieval sections of `mamai-report`. |
-| W2 | Run Phase A calibration on chosen judge. Re-run faithfulness v0.2.0 calibration. **Compare query rewriting / HyDE / multi-query results on `kenya_vignettes`**; decide whether to scope on-device implementation. Execute embedding-model swap decision (Track B). Start noisy-query probe. Continue corpus expansion. Continue `mamai-report` writing. |
-| W3 | Run Phase B production rescore (open-ended HealthBench, ±RAG). Re-precompute RAG contexts on new corpus + (possibly) new retriever + query-rewriting variant if a winner emerged. Run real-retrieval faithfulness probe. Build safety set for mamabench v0.3. |
-| W4 | Write the open-ended ±RAG report. Run open-ended on-device vs cluster calibration. Finalise `mamai-report` (including open-ended + safety sections). |
+| Week | Dates | Focus |
+|---|---|---|
+| W1 | Jun 8–12 | Cross-cutting decisions (judge tier + retriever tracks). File the consolidated budget ask. Resolve [`mamai-eval#1`](https://github.com/nmrenyi/mamai-eval/issues/1) (`max_tokens` question). Start corpus expansion scoping with Leah. **Kick off query-rewriting offline ablation ([`mamai#62`](https://github.com/nmrenyi/mamai/issues/62))** — Track A. Begin drafting methodology + retrieval sections of `mamai-report`. |
+| W2 | Jun 15–19 | Run Phase A calibration on chosen judge. Re-run faithfulness v0.2.0 calibration. **Compare query rewriting / HyDE / multi-query results on `kenya_vignettes`**; decide whether to scope on-device implementation. Execute embedding-model swap decision (Track B). Start noisy-query probe. Continue corpus expansion. Draft faithfulness + latency sections of `mamai-report`. |
+| W3 | Jun 22–26 | Run Phase B production rescore (open-ended HealthBench, ±RAG). Re-precompute RAG contexts on new corpus + (possibly) new retriever + query-rewriting variant if a winner emerged. Run real-retrieval faithfulness probe. **Start writing the open-ended ±RAG report** in parallel with the run. |
+| W4 | Jun 29–30 | **Finalise open-ended ±RAG report. Finalise `mamai-report` and hand off.** Anything else (safety set, on-device open-ended calibration) slips past 2026-06-30 and gets logged as post-internship TODO. |
 
-This sequence assumes the budget ask clears in W1. If it slips, faithfulness v0.2.0 calibration and open-ended Phase B both slide accordingly.
+This sequence assumes the budget ask clears in W1. If it slips, faithfulness v0.2.0 calibration and open-ended Phase B both slide accordingly — and given W4 is 2 days, **any W1 budget slip likely pushes the open-ended ±RAG report past 2026-06-30.** Flag this to Annie / Trevor early if W1 looks slow.
 
 ---
 
@@ -121,6 +116,11 @@ This sequence assumes the budget ask clears in W1. If it slips, faithfulness v0.
 - **Executing the RAG-aware fine-tuning plan.** Oracle-context faithfulness ≈ 0.3% true hallucination — the dominant failure mode (Pandey "irrelevant generation") is essentially absent. The plan stays gated. Only the real-retrieval faithfulness probe (faithfulness §2) can flip this decision.
 - **More benchmark construction beyond noisy queries + safety.** This month is for system improvement (per the week-13 weekly report); further benchmark surface comes after the report ships, if at all.
 - **Agentic tool calling on Gemma 4** (week 6 TODO). Out of scope for this month — revisit only if the report ships ahead of schedule.
+- **User testing in Zanzibar.** No longer pursued this internship cycle.
+- **Manual review of low-safety responses ([`mamai#50`](https://github.com/nmrenyi/mamai/issues/50), P1).** Deferred — this is a pre-pilot-expansion deployment gate; since no pilot expansion is happening this month, it's logged as a post-internship TODO. Worth re-surfacing when whoever picks up the project starts moving toward a pilot.
+- **Swahili evaluation ([`mamai#27`](https://github.com/nmrenyi/mamai/issues/27), [`#29`](https://github.com/nmrenyi/mamai/issues/29)).** No formal Swahili eval this month; logged as post-internship TODO. Genuine deployment-quality gap for the Zanzibar bilingual context.
+- **HF Space web demo ([`mamai#63`](https://github.com/nmrenyi/mamai/issues/63)).** Recent issue. Useful for researcher self-serve access but not on the critical path; revisit if W3/W4 has slack.
+- **`mamai#49` RAG injection-format ablations.** Contingency if query rewriting (Track A) alone does not close the RAG regression. The issue proposes 4 concrete variants (strip `Document N:` labels, add preamble, reorder, top-k vary). Not a W1–W2 priority; surface only if Track A results disappoint.
 
 ---
 
@@ -131,4 +131,4 @@ This sequence assumes the budget ask clears in W1. If it slips, faithfulness v0.
 - `mamai-eval-faithfulness/docs/faithfulness-eval-v0.2.0.md` — full faithfulness methodology + result.
 - `mamai-eval/calibration/judge_validation/reports/` — bake-off reports (gpt-oss-120b, Nemotron, Maverick, gpt-5-mini).
 - `mamaretrieval/AUDIT_REPORT_v2.md` — Tier 2 + Tier 3 retrieval scoreboards.
-- `mamai-mamabench-docs/mamai-finetuning-plan.md` — gated RAFT plan (uncommitted; commit before referencing externally).
+- [`mamai-finetuning-plan.md`](mamai-finetuning-plan.md) — gated RAFT plan, not currently triggered.
